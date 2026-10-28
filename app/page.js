@@ -27,13 +27,19 @@ export default function Home() {
     gsap.registerPlugin(ScrollTrigger);
     const lenis = new Lenis();
     lenis.on("scroll", ScrollTrigger.update);
-    const raf = (time) => {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
+    const onTick = (time) => {
+      lenis.raf(time * 1000);
     };
-    requestAnimationFrame(raf);
+    gsap.ticker.add(onTick);
+    gsap.ticker.lagSmoothing(0);
     document.documentElement.classList.add("lenis");
+    const refresh = () => ScrollTrigger.refresh();
+    window.addEventListener("load", refresh);
+    const t = window.setTimeout(refresh, 600);
     return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("load", refresh);
+      gsap.ticker.remove(onTick);
       lenis.destroy();
       document.documentElement.classList.remove("lenis");
     };

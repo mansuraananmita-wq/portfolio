@@ -1,14 +1,49 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Tilt from "react-parallax-tilt";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { WORKS } from "@/lib/data";
 
-function ProjectMedia({ src, poster, videoRef, contain }) {
+function playVideo(el) {
+  if (!el) return;
+  el.muted = true;
+  const play = el.play();
+  if (play && typeof play.catch === "function") {
+    play.catch(() => {});
+  }
+}
+
+function ProjectMedia({ src, poster, contain }) {
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !src) return;
+
+    const tryPlay = () => playVideo(el);
+    tryPlay();
+    el.addEventListener("canplay", tryPlay);
+    el.addEventListener("loadeddata", tryPlay);
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) tryPlay();
+        });
+      },
+      { threshold: 0.2, rootMargin: "120px" }
+    );
+    io.observe(el);
+
+    return () => {
+      el.removeEventListener("canplay", tryPlay);
+      el.removeEventListener("loadeddata", tryPlay);
+      io.disconnect();
+    };
+  }, [src]);
+
   return (
     <div
       className={`w-full h-full threedtransform ${
@@ -31,10 +66,11 @@ function ProjectMedia({ src, poster, videoRef, contain }) {
             <video
               src={src}
               ref={videoRef}
+              autoPlay
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="auto"
               className={
                 contain
                   ? "object-contain w-full h-full bg-slate-100"
@@ -92,27 +128,6 @@ function ProjectCopy({ name, desc, url }) {
 }
 
 export default function SelectedWorks() {
-  const videoRefs = useRef([]);
-
-  useLayoutEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    const ctx = gsap.context(() => {
-      videoRefs.current.forEach((el) => {
-        if (!el || typeof el.play !== "function") return;
-        ScrollTrigger.create({
-          trigger: el,
-          start: "top 80%",
-          end: "center top",
-          onEnter: () => el.play(),
-          onLeave: () => el.pause(),
-          onEnterBack: () => el.play(),
-          onLeaveBack: () => el.pause(),
-        });
-      });
-    });
-    return () => ctx.revert();
-  }, []);
-
   return (
     <div className="lg:mb-16 mb-10 rounded-3xl bg-gradient-to-br from-slate-50 to-white -mx-7 px-6 pb-16 border border-slate-100">
       <p className="font-bold text-[7vw] tracking-wide lg:pb-[15vh] pb-6 lg:mt-0 mt-6 gradient-text">
@@ -132,7 +147,6 @@ export default function SelectedWorks() {
                 src={work.video}
                 poster={work.poster}
                 contain={work.contain}
-                videoRef={(el) => (videoRefs.current[i] = el)}
               />
             </>
           ) : (
@@ -141,7 +155,6 @@ export default function SelectedWorks() {
                 src={work.video}
                 poster={work.poster}
                 contain={work.contain}
-                videoRef={(el) => (videoRefs.current[i] = el)}
               />
               <ProjectCopy name={work.name} desc={work.desc} url={work.url} />
             </>

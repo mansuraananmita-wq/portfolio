@@ -7,3 +7,4 @@ _extract
 scripts
 *.part
 *.tmp.mp4
+public/image/videos/_src
